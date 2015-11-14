@@ -138,7 +138,6 @@ std::string Interpreter::toString(const Expression *exp) {
 
 const Expression* Interpreter::interpret(const Expression *exp) {
     switch (exp->getType()) {
-        case Expressions::ATOM:
         case Expressions::FUNCTION:
         case Expressions::INTEGER:
         case Expressions::NIL:
@@ -146,6 +145,9 @@ const Expression* Interpreter::interpret(const Expression *exp) {
         case Expressions::STRING:
         case Expressions::VECTOR:
             return exp;
+
+        case Expressions::ATOM:
+            return currentContext->get(static_cast<const Atom*>(exp)->atom);
 
         case Expressions::LIST: {
             const List* list = static_cast<const List*>(exp);

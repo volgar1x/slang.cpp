@@ -9,3 +9,9 @@
 (let [actions {:hello "bonjour"}
       names   {:world "monde"}]
   (println (:hello actions) " " (:world names)))
+
+; nested scopes
+(let [var 1 hello "hello"]
+  (let [var 123]
+    (println var)
+    (println hello)))
