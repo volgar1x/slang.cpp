@@ -37,3 +37,24 @@
   ("" "falsy")
   (0 "falsy")
   (:true "truthy"))
+
+(defun bad-function []
+  (raise "boom!"))
+
+(defun good-function [] nil)
+
+(try
+  (do
+    (good-function)
+    (println "everyhing behave smoothly"))
+
+  ([cause]
+    (println "something bad happened: " cause)))
+
+(try
+  (do
+    (bad-function)
+    (println "everyhing behave smoothly"))
+
+  ([cause]
+    (println "something bad happened: " cause)))

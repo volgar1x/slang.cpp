@@ -3,6 +3,7 @@
 #include "Lexer.hpp"
 #include "Parser.hpp"
 #include "Interpreter.hpp"
+#include "Expressions/Exception.hpp"
 
 using namespace std;
 
@@ -18,8 +19,12 @@ int main() {
         if (expression->getType() == Expressions::NIL) {
             break;
         }
-        std::unique_ptr<const Expression> result = interpreter.interpret(*expression);
-        cout << endl << "> " << toString(*result) << endl;
+        try {
+            std::unique_ptr<const Expression> result = interpreter.interpret(*expression);
+            cout << endl << "> " << toString(*result) << endl;
+        } catch (const Exception& exception) {
+            cerr << endl << "Unexpected exception: " << exception.cause << endl;
+        }
     }
 
     return 0;

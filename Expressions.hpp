@@ -6,6 +6,7 @@
 #define SLANG_EXPRESSIONS_HPP
 
 #include "Expressions/Atom.hpp"
+#include "Expressions/Exception.hpp"
 #include "Expressions/Function.hpp"
 #include "Expressions/Integer.hpp"
 #include "Expressions/List.hpp"

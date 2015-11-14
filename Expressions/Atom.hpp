@@ -20,6 +20,10 @@ public:
     virtual std::unique_ptr<const Expression> copy() const {
         return std::unique_ptr<const Expression>(new Atom(atom, value));
     }
+
+    virtual std::unique_ptr<const Expression> copyAsValue(bool value) const {
+        return std::unique_ptr<const Expression>(new Atom(atom, value));
+    }
 };
 
 #endif //SLANG_ATOM_HPP

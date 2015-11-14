@@ -36,6 +36,8 @@ public:
     virtual ~Interpreter();
 
     std::unique_ptr<const Expression> interpret(const Expression& exp);
+    template<class ExprItr>
+    std::unique_ptr<const Expression> interpretAll(ExprItr begin, ExprItr end);
 
 private:
     std::unique_ptr<const Expression> accessSet(const std::string& key, const List::values_t& values);
@@ -52,6 +54,9 @@ std::unique_ptr<const Expression> println(Interpreter& context, const List::valu
 std::unique_ptr<const Expression> readln(Interpreter& context, const List::values_t& parameters);
 std::unique_ptr<const Expression> plus(Interpreter& context, const List::values_t& parameters);
 std::unique_ptr<const Expression> case_macro(Interpreter& context, const List::values_t& parameters);
+std::unique_ptr<const Expression> do_macro(Interpreter& context, const List::values_t& parameters);
+std::unique_ptr<const Expression> try_macro(Interpreter& context, const List::values_t& parameters);
+std::unique_ptr<const Expression> raise_macro(Interpreter& context, const List::values_t& parameters);
 
 
 class UserFunction : public Function<Interpreter> {

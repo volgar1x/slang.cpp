@@ -41,6 +41,9 @@ Interpreter::Interpreter()
     set("let", std::unique_ptr<const Expression>(new NaFun("let", &Interpreter::let, true)));
     set("defun", std::unique_ptr<const Expression>(new NaFun("defun", &Interpreter::defun, true)));
     set("case", std::unique_ptr<const Expression>(new NaFun("case", &case_macro, true)));
+    set("do", std::unique_ptr<const Expression>(new NaFun("do", &do_macro, true)));
+    set("try", std::unique_ptr<const Expression>(new NaFun("try", &try_macro, true)));
+    set("raise", std::unique_ptr<const Expression>(new NaFun("raise", &raise_macro, true)));
 }
 
 Interpreter::Interpreter(const InterpreterContext* parent)
@@ -102,6 +105,10 @@ std::string toString(const Expression& exp) {
             ss << static_cast<const String&>(exp).str;
             break;
 
+        case Expressions::EXCEPTION:
+            ss << static_cast<const Exception&>(exp).cause;
+            break;
+
         case Expressions::INTEGER:
             ss << static_cast<const Integer&>(exp).integer;
             break;
@@ -125,6 +132,7 @@ std::unique_ptr<const Expression> Interpreter::interpret(const Expression& exp) 
         case Expressions::SET:
         case Expressions::STRING:
         case Expressions::VECTOR:
+        case Expressions::EXCEPTION:
             return exp.copy();
 
         case Expressions::ATOM: {
@@ -150,6 +158,15 @@ std::unique_ptr<const Expression> Interpreter::interpret(const Expression& exp) 
             }
         }
     }
+}
+
+template<class ExprItr>
+std::unique_ptr<const Expression> Interpreter::interpretAll(ExprItr begin, ExprItr end) {
+    std::unique_ptr<const Expression> result(new Nil);
+    for (auto it = begin; it != end; it++) {
+        result = interpret(**it);
+    }
+    return result;
 }
 
 std::unique_ptr<const Expression> Interpreter::accessSet(const std::string& key, const List::values_t& values) {
@@ -231,12 +248,7 @@ std::unique_ptr<const Expression> Interpreter::let(const List::values_t& paramet
         child.set(name->atom, interpret(*value));
     }
 
-    std::unique_ptr<const Expression> result = std::unique_ptr<const Expression>(new Nil);
-    for (int i = 1; i < parameters.size(); i++) {
-        result = child.interpret(*parameters[i]);
-    }
-
-    return result;
+    return child.interpretAll(parameters.begin() + 1, parameters.end());
 }
 
 std::unique_ptr<const Expression> Interpreter::defun(const List::values_t& parameters) {
@@ -255,7 +267,7 @@ std::unique_ptr<const Expression> Interpreter::defun(const List::values_t& param
 
     set(name, std::unique_ptr<const Expression>(new UserFunction(name, rest, arguments)));
 
-    return atom->copy();
+    return atom->copyAsValue(true);
 }
 
 std::unique_ptr<const Expression> case_macro(Interpreter& context, const List::values_t& parameters) {
@@ -269,6 +281,37 @@ std::unique_ptr<const Expression> case_macro(Interpreter& context, const List::v
     return std::unique_ptr<const Expression>(new Nil);
 }
 
+std::unique_ptr<const Expression> do_macro(Interpreter& context, const List::values_t& parameters) {
+    return context.interpretAll(parameters.begin(), parameters.end());
+}
+
+std::unique_ptr<const Expression> try_macro(Interpreter& context, const List::values_t& parameters) {
+    try {
+        Interpreter child(&context);
+        return child.interpret(*parameters[0]);
+    } catch (const Exception& exception) {
+        auto branch = std::static_pointer_cast<const List>(parameters[1]);
+        auto arguments = std::static_pointer_cast<const Vector>(branch->values[0]);
+        auto argument = std::static_pointer_cast<const Atom>(arguments->values[0]);
+        Interpreter child(&context);
+        child.set(argument->atom, exception.copy());
+        return child.interpretAll(branch->values.begin() + 1, branch->values.end());
+    }
+}
+
+std::unique_ptr<const Expression> raise_macro(Interpreter& context, const List::values_t& parameters) {
+    std::string cause;
+    if (parameters.empty()) {
+        cause = "empty";
+    } else {
+        for (auto parameter : parameters) {
+            auto expression = context.interpret(*parameter);
+            cause += toString(*expression);
+        }
+    }
+
+    throw Exception(cause);
+}
 
 bool UserFunction::requireParameterEvaluation() const {
     return true;
@@ -281,11 +324,7 @@ std::unique_ptr<const Expression> UserFunction::call(Interpreter& scope, const L
         child.set(arguments[i], parameters[i]->copy());
     }
 
-    std::unique_ptr<const Expression> result;
-    for (auto expression : expressions) {
-        result = child.interpret(*expression);
-    }
-    return result;
+    return child.interpretAll(expressions.begin(), expressions.end());
 }
 
 std::unique_ptr<const Expression> UserFunction::copy() const {

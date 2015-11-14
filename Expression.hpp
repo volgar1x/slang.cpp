@@ -9,6 +9,7 @@
 
 enum class Expressions {
     ATOM,
+    EXCEPTION,
     FUNCTION,
     INTEGER,
     LIST,
