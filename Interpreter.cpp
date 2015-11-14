@@ -39,6 +39,7 @@ Interpreter::Interpreter()
     set("readln", std::unique_ptr<const Expression>(new NaFun("readln", &readln, false)));
     set("+", std::unique_ptr<const Expression>(new NaFun("+", &plus, false)));
     set("let", std::unique_ptr<const Expression>(new NaFun("let", &Interpreter::let, true)));
+    set("defun", std::unique_ptr<const Expression>(new NaFun("defun", &Interpreter::defun, true)));
 }
 
 Interpreter::Interpreter(const InterpreterContext* parent)
@@ -230,4 +231,46 @@ std::unique_ptr<const Expression> Interpreter::let(const List::values_t& paramet
     }
 
     return result;
+}
+
+std::unique_ptr<const Expression> Interpreter::defun(const List::values_t& parameters) {
+    std::shared_ptr<const Atom> atom = std::static_pointer_cast<const Atom>(parameters[0]);
+    std::shared_ptr<const Vector> vector = std::static_pointer_cast<const Vector>(parameters[1]);
+
+    std::string name = atom->atom;
+    std::vector<std::string> arguments;
+    for (auto expression : vector->values) {
+        std::shared_ptr<const Atom> atomExpression = std::static_pointer_cast<const Atom>(expression);
+        arguments.push_back(atomExpression->atom);
+    }
+
+    List::values_t rest(parameters);
+    rest.erase(rest.begin(), rest.begin() + 2);
+
+    set(name, std::unique_ptr<const Expression>(new UserFunction(name, rest, arguments)));
+
+    return atom->copy();
+}
+
+
+bool UserFunction::requireParameterEvaluation() const {
+    return true;
+}
+
+std::unique_ptr<const Expression> UserFunction::call(Interpreter& scope, const List::values_t& parameters) const {
+    Interpreter child(&scope);
+
+    for (int i = 0; i < arguments.size(); i++) {
+        child.set(arguments[i], parameters[i]->copy());
+    }
+
+    std::unique_ptr<const Expression> result;
+    for (auto expression : expressions) {
+        result = child.interpret(*expression);
+    }
+    return result;
+}
+
+std::unique_ptr<const Expression> UserFunction::copy() const {
+    return std::unique_ptr<const Expression>(new UserFunction(this->functionName, expressions, arguments));
 }

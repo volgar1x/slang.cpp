@@ -18,3 +18,13 @@
 
 (let [name (readln "What's your name? ")]
   (println "Hello, " name "!"))
+
+(defun hello-world [name]
+  (println "Hello, " name "!"))
+
+(hello-world "World")
+
+(let [name "global"]
+  (defun print-name [name] (println name))
+  (let [name "local"]
+    (print-name name)))

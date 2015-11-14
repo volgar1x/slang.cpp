@@ -42,6 +42,7 @@ private:
     std::unique_ptr<const Expression> callFunction(const List::values_t& values);
 
     std::unique_ptr<const Expression> let(const List::values_t& parameters);
+    std::unique_ptr<const Expression> defun(const List::values_t& parameters);
 };
 
 std::string toString(const Expression& exp);
@@ -50,5 +51,23 @@ std::unique_ptr<const Expression> print(Interpreter& context, const List::values
 std::unique_ptr<const Expression> println(Interpreter& context, const List::values_t& parameters);
 std::unique_ptr<const Expression> readln(Interpreter& context, const List::values_t& parameters);
 std::unique_ptr<const Expression> plus(Interpreter& context, const List::values_t& parameters);
+
+
+class UserFunction : public Function<Interpreter> {
+private:
+    List::values_t expressions;
+    std::vector<std::string> arguments;
+
+public:
+    UserFunction(const std::string& functionName, List::values_t expressions, const std::vector<std::string>& arguments)
+            : Function(functionName)
+            , expressions(expressions)
+            , arguments(arguments)
+            { }
+
+    virtual bool requireParameterEvaluation() const;
+    virtual std::unique_ptr<const Expression> call(Interpreter& scope, const List::values_t& parameters) const;
+    virtual std::unique_ptr<const Expression> copy() const;
+};
 
 #endif //SLANG_INTERPRETER_HPP
