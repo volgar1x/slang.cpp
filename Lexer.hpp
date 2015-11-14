@@ -14,7 +14,7 @@ public:
     Lexer(std::istream& is);
 
     const Lex* next();
-    void expect(const Lex* lex);
+    void expect(LexType lexType);
 
 private:
     const Lex* nextStr();

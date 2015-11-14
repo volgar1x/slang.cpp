@@ -48,7 +48,7 @@ const Expression* Parser::nextString() {
     const Lex* lex = _lexer.next();
     if (lex->lexType == LexType::LEX) {
         const StrLex* strLex = static_cast<const StrLex*>(lex);
-        _lexer.expect(&LEX_STR);
+        _lexer.expect(LexType::STR);
         return new String(strLex->str);
     } else if (lex->lexType == LexType::STR) {
         return new String("");
@@ -56,7 +56,7 @@ const Expression* Parser::nextString() {
 
     std::string msg;
     msg += "didnt expect a ";
-    msg += lex->lexName;
+    msg += toString(lex->lexType);
     throw std::runtime_error(msg);
 }
 

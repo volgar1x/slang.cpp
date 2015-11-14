@@ -5,14 +5,6 @@
 #include <exception>
 #include "Lexer.hpp"
 
-
-bool isAlphanumeric(char c) {
-    return (c >= '0' && c <= '9') ||
-            (c >= 'a' && c <= 'z') ||
-            (c >= 'A' && c <= 'Z');
-}
-
-
 Lexer::Lexer(std::istream& is)
     : _is(is)
     , _inStr(false)
@@ -66,12 +58,12 @@ const Lex* Lexer::next() {
     char c;
 
     if (!_is.get(c)) {
-        return &LEX_EOF;
+        return new Lex(LexType::EOFF);
     }
 
     if (isWhitespacePart(c)) {
         ignoreWhitespaces();
-        return &LEX_WS;
+        return new Lex(LexType::WS);
     }
 
     switch (c) {
@@ -80,29 +72,29 @@ const Lex* Lexer::next() {
             return next();
 
         case '(':
-            return &LEX_LST_START;
+            return new Lex(LexType::LST_START);
 
         case ')':
-            return &LEX_LST_END;
+            return new Lex(LexType::LST_END);
 
         case '[':
-            return &LEX_VEC_START;
+            return new Lex(LexType::VEC_START);
 
         case ']':
-            return &LEX_VEC_END;
+            return new Lex(LexType::VEC_END);
 
         case '{':
-            return &LEX_SET_START;
+            return new Lex(LexType::SET_START);
 
         case '}':
-            return &LEX_SET_END;
+            return new Lex(LexType::SET_END);
 
         case '"':
             _inStr = !_inStr;
-            return &LEX_STR;
+            return new Lex(LexType::STR);
 
         case '\'':
-            return &LEX_CHR;
+            return new Lex(LexType::CHR);
 
         default:
             _is.putback(c);
@@ -122,14 +114,14 @@ const Lex* Lexer::nextStr() {
     return new StrLex(s);
 }
 
-void Lexer::expect(const Lex* lex) {
-    const Lex* lex2 = next();
-    if (lex != lex2 && lex->lexName != lex2->lexName) {
+void Lexer::expect(LexType lexType) {
+    const Lex* lex = next();
+    if (lexType != lex->lexType) {
         std::string msg;
         msg += "expected ";
-        msg += lex->lexName;
+        msg += toString(lexType);
         msg += " but got ";
-        msg += lex2->lexName;
+        msg += toString(lex->lexType);
         throw std::runtime_error(msg);
     }
 }
