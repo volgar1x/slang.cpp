@@ -15,7 +15,7 @@ InterpreterContext::InterpreterContext(const InterpreterContext* parent)
         : parent(parent)
         { }
 
-const Expression& InterpreterContext::get(std::string key) const {
+const Expression& InterpreterContext::get(const std::string& key) const {
     auto it = map.find(key);
     if (it != map.end()) {
         return *it->second;
@@ -26,7 +26,7 @@ const Expression& InterpreterContext::get(std::string key) const {
     throw std::runtime_error("cannot find variable `" + key + "'");
 }
 
-void InterpreterContext::set(std::string key, std::unique_ptr<const Expression> value) {
+void InterpreterContext::set(const std::string& key, std::unique_ptr<const Expression> value) {
     map[key] = std::move(value);
 }
 
@@ -171,8 +171,8 @@ std::unique_ptr<const Expression> Interpreter::callFunction(const List::values_t
     parameters.erase(parameters.begin());
 
     if (function.requireParameterEvaluation()) {
-        for (auto it = parameters.begin(); it != parameters.end(); it++) {
-            *it = interpret(**it);
+        for (std::shared_ptr<const Expression>& parameter : parameters) {
+            parameter = interpret(*parameter);
         }
     }
 

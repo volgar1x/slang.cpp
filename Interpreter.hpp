@@ -18,8 +18,8 @@ public:
     InterpreterContext();
     InterpreterContext(const InterpreterContext* parent);
 
-    const Expression& get(std::string key) const;
-    void set(std::string key, std::unique_ptr<const Expression> value);
+    const Expression& get(const std::string& key) const;
+    void set(const std::string& key, std::unique_ptr<const Expression> value);
 
 private:
     const InterpreterContext* parent;
