@@ -40,6 +40,7 @@ Interpreter::Interpreter()
     using namespace std::placeholders;
     set("print", new NaFun("print", &print, false));
     set("println", new NaFun("println", &println, false));
+    set("readln", new NaFun("readln", &readln, false));
     set("+", new NaFun("+", &plus, false));
     set("let", new NaFun("let", &Interpreter::let, true));
 }
@@ -196,6 +197,13 @@ const Expression* println(Interpreter& context, const List* parameters) {
     print(context, parameters);
     std::cout << std::endl;
     return new Nil;
+}
+
+const Expression* readln(Interpreter& context, const List* parameters) {
+    print(context, parameters);
+    std::string line;
+    std::cin >> line;
+    return new String(line);
 }
 
 const Expression* plus(Interpreter& context, const List* parameters) {

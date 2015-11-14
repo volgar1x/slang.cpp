@@ -15,3 +15,6 @@
   (let [var 123]
     (println var)
     (println hello)))
+
+(let [name (readln "What's your name? ")]
+  (println "Hello, " name "!"))

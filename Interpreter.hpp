@@ -45,6 +45,7 @@ std::string toString(const Expression* exp);
 
 const Expression* print(Interpreter& context, const List* parameters);
 const Expression* println(Interpreter& context, const List* parameters);
+const Expression* readln(Interpreter& context, const List* parameters);
 const Expression* plus(Interpreter& context, const List* parameters);
 
 #endif //SLANG_INTERPRETER_HPP
