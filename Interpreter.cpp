@@ -11,34 +11,12 @@ InterpreterContext::InterpreterContext()
         : parent(nullptr)
         { }
 
-InterpreterContext::InterpreterContext(InterpreterContext* parent)
+InterpreterContext::InterpreterContext(const InterpreterContext* parent)
         : parent(parent)
         { }
 
 InterpreterContext::~InterpreterContext() {
 
-}
-
-InterpreterContext::map_t::const_iterator InterpreterContext::lookup(std::string key) const {
-    if (parent != nullptr) {
-        map_t::const_iterator it = parent->lookup(key);
-        if (it == parent->map.end()) {
-            it = map.end();
-        }
-        return it;
-    }
-    return map.find(key);
-}
-
-InterpreterContext::map_t::iterator InterpreterContext::lookup(std::string key) {
-    if (parent != nullptr) {
-        auto it = parent->lookup(key);
-        if (it == parent->map.end()) {
-            it = map.end();
-        }
-        return it;
-    }
-    return map.find(key);
 }
 
 const Expression* InterpreterContext::get(std::string key) const {
@@ -57,20 +35,24 @@ void InterpreterContext::set(std::string key, const Expression* value) {
 }
 
 Interpreter::Interpreter()
-    : currentContext(new InterpreterContext)
+    : InterpreterContext()
 {
     using namespace std::placeholders;
-    currentContext->set("print", new NativeFunction("print", std::bind(&Interpreter::print, this, _1), false));
-    currentContext->set("println", new NativeFunction("println", std::bind(&Interpreter::println, this, _1), false));
-    currentContext->set("+", new NativeFunction("+", std::bind(&Interpreter::plus, this, _1), false));
-    currentContext->set("let", new NativeFunction("let", std::bind(&Interpreter::let, this, _1), true));
+    set("print", new NaFun("print", &print, false));
+    set("println", new NaFun("println", &println, false));
+    set("+", new NaFun("+", &plus, false));
+    set("let", new NaFun("let", &Interpreter::let, true));
 }
+
+Interpreter::Interpreter(const InterpreterContext* parent)
+    : InterpreterContext(parent)
+    { }
 
 Interpreter::~Interpreter() {
-    delete currentContext;
+
 }
 
-std::string Interpreter::toString(const Expression* exp) {
+std::string toString(const Expression* exp) {
     std::stringstream ss;
 
     const List* list;
@@ -147,7 +129,7 @@ const Expression* Interpreter::interpret(const Expression* exp) {
             return exp;
 
         case Expressions::ATOM:
-            return currentContext->get(static_cast<const Atom*>(exp)->atom);
+            return get(static_cast<const Atom*>(exp)->atom);
 
         case Expressions::LIST: {
             const List* list = static_cast<const List*>(exp);
@@ -161,7 +143,7 @@ const Expression* Interpreter::interpret(const Expression* exp) {
                 if (atom->value) {
                     // set access
                     if (const Atom* setName = dynamic_cast<const Atom*>(list->values[1])) {
-                        const Expression* setExpression = currentContext->get(setName->atom);
+                        const Expression* setExpression = get(setName->atom);
                         if (const Set* set = dynamic_cast<const Set*>(setExpression)) {
                             auto it = set->values.begin();
                             while (it != set->values.end()) {
@@ -181,17 +163,17 @@ const Expression* Interpreter::interpret(const Expression* exp) {
                     }
                 } else {
                     // function call
-                    const Expression* value = currentContext->get(identifier);
-                    if (const NativeFunction* function = dynamic_cast<const NativeFunction*>(value)) {
+                    const Expression* value = get(identifier);
+                    if (const Fun* function = dynamic_cast<const Fun*>(value)) {
                         List::values_t parameters(list->values);
                         parameters.erase(parameters.begin());
-                        if (!function->macro) {
+                        if (function->requireParameterEvaluation()) {
                             for (auto it = parameters.begin(); it != parameters.end(); it++) {
                                 *it = interpret(*it);
                             }
                         }
                         List* parametersList = new List(parameters);
-                        const Expression* result = function->functionPtr(parametersList);
+                        const Expression* result = function->call(*this, parametersList);
                         return result;
                     }
                 }
@@ -202,7 +184,7 @@ const Expression* Interpreter::interpret(const Expression* exp) {
     }
 }
 
-const Expression* Interpreter::print(const List* parameters) {
+const Expression* print(Interpreter& context, const List* parameters) {
     for (const Expression* parameter : parameters->values) {
         std::cout << toString(parameter);
     }
@@ -210,13 +192,13 @@ const Expression* Interpreter::print(const List* parameters) {
     return new Nil;
 }
 
-const Expression* Interpreter::println(const List* parameters) {
-    print(parameters);
+const Expression* println(Interpreter& context, const List* parameters) {
+    print(context, parameters);
     std::cout << std::endl;
     return new Nil;
 }
 
-const Expression* Interpreter::plus(const List* parameters) {
+const Expression* plus(Interpreter& context, const List* parameters) {
     Integer::integer_t acc = 0;
     for (const Expression* parameter : parameters->values) {
         if (const Integer* integer = dynamic_cast<const Integer*>(parameter)) {
@@ -227,8 +209,7 @@ const Expression* Interpreter::plus(const List* parameters) {
 }
 
 const Expression* Interpreter::let(const List* parameters) {
-    InterpreterContext* parentContext = currentContext;
-    InterpreterContext context(parentContext);
+    Interpreter child(this);
 
     const Vector* bindings = static_cast<const Vector*>(parameters->values[0]);
     auto it = bindings->values.begin();
@@ -238,17 +219,13 @@ const Expression* Interpreter::let(const List* parameters) {
         const Expression* value = *it;
         it++;
 
-        context.set(name->atom, interpret(value));
+        child.set(name->atom, interpret(value));
     }
-
-    currentContext = &context;
 
     const Expression* result = new Nil;
     for (int i = 1; i < parameters->values.size(); i++) {
-        result = interpret(parameters->values[i]);
+        result = child.interpret(parameters->values[i]);
     }
-
-    currentContext = parentContext;
 
     return result;
 }

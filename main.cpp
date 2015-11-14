@@ -29,7 +29,7 @@ int main() {
             break;
         }
         const Expression* result = interpreter.interpret(expression);
-        cout << endl << "> " << interpreter.toString(result) << endl;
+        cout << endl << "> " << toString(result) << endl;
     }
 
     return 0;
