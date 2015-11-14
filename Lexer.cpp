@@ -50,7 +50,7 @@ std::string Lexer::untilWhitespace() {
     return s;
 }
 
-const Lex* Lexer::next() {
+std::unique_ptr<const Lex> Lexer::next() {
     if (_inStr && _is.peek() != '"') {
         return nextStr();
     }
@@ -58,12 +58,12 @@ const Lex* Lexer::next() {
     char c;
 
     if (!_is.get(c)) {
-        return new Lex(LexType::EOFF);
+        return std::unique_ptr<const Lex>(new Lex(LexType::EOFF));
     }
 
     if (isWhitespacePart(c)) {
         ignoreWhitespaces();
-        return new Lex(LexType::WS);
+        return std::unique_ptr<const Lex>(new Lex(LexType::WS));
     }
 
     switch (c) {
@@ -72,37 +72,37 @@ const Lex* Lexer::next() {
             return next();
 
         case '(':
-            return new Lex(LexType::LST_START);
+            return std::unique_ptr<const Lex>(new Lex(LexType::LST_START));
 
         case ')':
-            return new Lex(LexType::LST_END);
+            return std::unique_ptr<const Lex>(new Lex(LexType::LST_END));
 
         case '[':
-            return new Lex(LexType::VEC_START);
+            return std::unique_ptr<const Lex>(new Lex(LexType::VEC_START));
 
         case ']':
-            return new Lex(LexType::VEC_END);
+            return std::unique_ptr<const Lex>(new Lex(LexType::VEC_END));
 
         case '{':
-            return new Lex(LexType::SET_START);
+            return std::unique_ptr<const Lex>(new Lex(LexType::SET_START));
 
         case '}':
-            return new Lex(LexType::SET_END);
+            return std::unique_ptr<const Lex>(new Lex(LexType::SET_END));
 
         case '"':
             _inStr = !_inStr;
-            return new Lex(LexType::STR);
+            return std::unique_ptr<const Lex>(new Lex(LexType::STR));
 
         case '\'':
-            return new Lex(LexType::CHR);
+            return std::unique_ptr<const Lex>(new Lex(LexType::CHR));
 
         default:
             _is.putback(c);
-            return new StrLex(untilWhitespace());
+            return std::unique_ptr<const Lex>(new StrLex(untilWhitespace()));
     }
 }
 
-const Lex* Lexer::nextStr() {
+std::unique_ptr<const Lex> Lexer::nextStr() {
     std::string s;
     char c;
 
@@ -111,11 +111,11 @@ const Lex* Lexer::nextStr() {
     }
     _is.putback('"');
 
-    return new StrLex(s);
+    return std::unique_ptr<const Lex>(new StrLex(s));
 }
 
 void Lexer::expect(LexType lexType) {
-    const Lex* lex = next();
+    std::unique_ptr<const Lex> lex = next();
     if (lexType != lex->lexType) {
         std::string msg;
         msg += "expected ";

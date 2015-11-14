@@ -18,13 +18,13 @@ enum class Expressions {
     VECTOR,
 };
 
-
 class Expression {
 public:
     virtual ~Expression() {}
 
     virtual std::string getName() const = 0;
     virtual Expressions getType() const = 0;
+    virtual std::unique_ptr<const Expression> copy() const = 0;
 };
 
 #endif //SLANG_EXPRESSION_HPP

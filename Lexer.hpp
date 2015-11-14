@@ -13,11 +13,11 @@ class Lexer {
 public:
     Lexer(std::istream& is);
 
-    const Lex* next();
+    std::unique_ptr<const Lex> next();
     void expect(LexType lexType);
 
 private:
-    const Lex* nextStr();
+    std::unique_ptr<const Lex> nextStr();
 
     void ignoreLine();
     void ignoreWhitespaces();

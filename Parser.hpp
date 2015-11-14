@@ -13,14 +13,14 @@ class Parser {
 public:
     Parser(Lexer& lexer);
 
-    const Expression* next();
+    std::unique_ptr<const Expression> next();
 
 private:
-    const Expression* next(const Lex* lex);
-    const Expression* nextString();
-    const Expression* scanTerm(const StrLex* lex);
+    std::unique_ptr<const Expression> next(const Lex& lex);
+    std::unique_ptr<const Expression> nextString();
+    std::unique_ptr<const Expression> scanTerm(const std::string& term);
     template<typename Col>
-    const Expression* nextCol(LexType delimiter);
+    std::unique_ptr<const Expression> nextCol(LexType delimiter);
 
     Lexer& _lexer;
 };

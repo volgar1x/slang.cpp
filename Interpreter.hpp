@@ -9,17 +9,17 @@
 #include "Expression.hpp"
 #include "Expressions/List.hpp"
 #include "Expressions/Function.hpp"
+#include "Expressions/Set.hpp"
 
 class InterpreterContext {
 public:
-    typedef std::map<std::string, const Expression*> map_t;
+    typedef std::map<std::string, std::unique_ptr<const Expression>> map_t;
 
     InterpreterContext();
     InterpreterContext(const InterpreterContext* parent);
-    virtual ~InterpreterContext();
 
-    const Expression* get(std::string key) const;
-    void set(std::string key, const Expression* value);
+    const Expression& get(std::string key) const;
+    void set(std::string key, std::unique_ptr<const Expression> value);
 
 private:
     const InterpreterContext* parent;
@@ -35,17 +35,20 @@ public:
     Interpreter(const InterpreterContext* parent);
     virtual ~Interpreter();
 
-    const Expression* interpret(const Expression* exp);
+    std::unique_ptr<const Expression> interpret(const Expression& exp);
 
 private:
-    const Expression* let(const List* parameters);
+    std::unique_ptr<const Expression> accessSet(const std::string& key, const List::values_t& values);
+    std::unique_ptr<const Expression> callFunction(const List::values_t& values);
+
+    std::unique_ptr<const Expression> let(const List::values_t& parameters);
 };
 
-std::string toString(const Expression* exp);
+std::string toString(const Expression& exp);
 
-const Expression* print(Interpreter& context, const List* parameters);
-const Expression* println(Interpreter& context, const List* parameters);
-const Expression* readln(Interpreter& context, const List* parameters);
-const Expression* plus(Interpreter& context, const List* parameters);
+std::unique_ptr<const Expression> print(Interpreter& context, const List::values_t& parameters);
+std::unique_ptr<const Expression> println(Interpreter& context, const List::values_t& parameters);
+std::unique_ptr<const Expression> readln(Interpreter& context, const List::values_t& parameters);
+std::unique_ptr<const Expression> plus(Interpreter& context, const List::values_t& parameters);
 
 #endif //SLANG_INTERPRETER_HPP

@@ -17,6 +17,10 @@ public:
 
     virtual std::string getName() const { return "INTEGER"; }
     virtual Expressions getType() const { return Expressions::INTEGER; }
+
+    virtual std::unique_ptr<const Expression> copy() const {
+        return std::unique_ptr<const Expression>(new Integer(integer));
+    }
 };
 
 #endif //SLANG_INTEGER_HPP

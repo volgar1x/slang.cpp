@@ -16,6 +16,10 @@ public:
 
     virtual std::string getName() const { return "ATOM"; }
     virtual Expressions getType() const { return Expressions::ATOM; }
+
+    virtual std::unique_ptr<const Expression> copy() const {
+        return std::unique_ptr<const Expression>(new Atom(atom, value));
+    }
 };
 
 #endif //SLANG_ATOM_HPP

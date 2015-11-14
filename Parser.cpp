@@ -11,24 +11,22 @@ Parser::Parser(Lexer& lexer)
         : _lexer(lexer)
 { }
 
-const Expression* Parser::next() {
-    const Lex* lex;
+std::unique_ptr<const Expression> Parser::next() {
     while (true) {
-        lex = _lexer.next();
+        std::unique_ptr<const Lex> lex = _lexer.next();
         if (lex->lexType != LexType::WS) {
-            break;
+            return next(*lex);
         }
     }
-    return next(lex);
 }
 
-const Expression* Parser::next(const Lex* lex) {
-    switch (lex->lexType) {
+std::unique_ptr<const Expression> Parser::next(const Lex& lex) {
+    switch (lex.lexType) {
         case LexType::STR:
             return nextString();
 
         case LexType::LEX:
-            return scanTerm(static_cast<const StrLex*>(lex));
+            return scanTerm(static_cast<const StrLex&>(lex).str);
 
         case LexType::LST_START:
             return nextCol<List>(LexType::LST_END);
@@ -40,31 +38,26 @@ const Expression* Parser::next(const Lex* lex) {
             return nextCol<Set>(LexType::SET_END);
 
         default:
-            return new Nil;
+            return std::unique_ptr<const Expression>(new Nil);
     }
 }
 
-const Expression* Parser::nextString() {
-    const Lex* lex = _lexer.next();
+std::unique_ptr<const Expression> Parser::nextString() {
+    std::unique_ptr<const Lex> lex = _lexer.next();
     if (lex->lexType == LexType::LEX) {
-        const StrLex* strLex = static_cast<const StrLex*>(lex);
         _lexer.expect(LexType::STR);
-        return new String(strLex->str);
+        const StrLex* strLex = static_cast<const StrLex*>(lex.get());
+        return std::unique_ptr<const Expression>(new String(strLex->str));
     } else if (lex->lexType == LexType::STR) {
-        return new String("");
+        return std::unique_ptr<const Expression>(new String(""));
     }
 
-    std::string msg;
-    msg += "didnt expect a ";
-    msg += toString(lex->lexType);
-    throw std::runtime_error(msg);
+    throw std::runtime_error("didnt expect a " + toString(lex->lexType));
 }
 
-const Expression* Parser::scanTerm(const StrLex* lex) {
-    std::string term = lex->str;
-
+std::unique_ptr<const Expression> Parser::scanTerm(const std::string& term) {
     if (term[0] == ':') {
-        return new Atom(term.substr(1), true);
+        return std::unique_ptr<const Expression>(new Atom(term.substr(1), true));
     }
 
     bool isInteger = true;
@@ -79,25 +72,25 @@ const Expression* Parser::scanTerm(const StrLex* lex) {
         std::stringstream ss(term);
         Integer::integer_t res;
         ss >> res;
-        return new Integer(res);
+        return std::unique_ptr<const Expression>(new Integer(res));
     }
 
-    return new Atom(term, false);
+    return std::unique_ptr<const Expression>(new Atom(term, false));
 }
 
 template<typename Col>
-const Expression* Parser::nextCol(LexType delimiter) {
-    std::vector<const Expression*> expressions;
+std::unique_ptr<const Expression> Parser::nextCol(LexType delimiter) {
+    std::vector<std::shared_ptr<const Expression>> expressions;
     while (true) {
-        const Lex* lex = _lexer.next();
+        std::unique_ptr<const Lex> lex = _lexer.next();
         if (lex->lexType == LexType::WS) {
             continue;
         }
         if (lex->lexType == delimiter) {
             break;
         }
-        expressions.push_back(next(lex));
+        expressions.push_back(next(*lex));
     }
 
-    return new Col(expressions);
+    return std::unique_ptr<const Expression>(new Col(expressions));
 }

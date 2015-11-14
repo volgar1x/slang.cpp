@@ -15,14 +15,10 @@ InterpreterContext::InterpreterContext(const InterpreterContext* parent)
         : parent(parent)
         { }
 
-InterpreterContext::~InterpreterContext() {
-
-}
-
-const Expression* InterpreterContext::get(std::string key) const {
+const Expression& InterpreterContext::get(std::string key) const {
     auto it = map.find(key);
     if (it != map.end()) {
-        return it->second;
+        return *it->second;
     }
     if (parent != nullptr) {
         return parent->get(key);
@@ -30,19 +26,19 @@ const Expression* InterpreterContext::get(std::string key) const {
     throw std::runtime_error("cannot find variable `" + key + "'");
 }
 
-void InterpreterContext::set(std::string key, const Expression* value) {
-    map[key] = value;
+void InterpreterContext::set(std::string key, std::unique_ptr<const Expression> value) {
+    map[key] = std::move(value);
 }
 
 Interpreter::Interpreter()
     : InterpreterContext()
 {
     using namespace std::placeholders;
-    set("print", new NaFun("print", &print, false));
-    set("println", new NaFun("println", &println, false));
-    set("readln", new NaFun("readln", &readln, false));
-    set("+", new NaFun("+", &plus, false));
-    set("let", new NaFun("let", &Interpreter::let, true));
+    set("print", std::unique_ptr<const Expression>(new NaFun("print", &print, false)));
+    set("println", std::unique_ptr<const Expression>(new NaFun("println", &println, false)));
+    set("readln", std::unique_ptr<const Expression>(new NaFun("readln", &readln, false)));
+    set("+", std::unique_ptr<const Expression>(new NaFun("+", &plus, false)));
+    set("let", std::unique_ptr<const Expression>(new NaFun("let", &Interpreter::let, true)));
 }
 
 Interpreter::Interpreter(const InterpreterContext* parent)
@@ -53,59 +49,59 @@ Interpreter::~Interpreter() {
 
 }
 
-std::string toString(const Expression* exp) {
+std::string toString(const Expression& exp) {
     std::stringstream ss;
 
-    const List* list;
-    const Vector* vector;
-    const Set* set;
-    const Atom* atom;
-
-    switch (exp->getType()) {
-        case Expressions::LIST:
-            list = static_cast<const List*>(exp);
+    switch (exp.getType()) {
+        case Expressions::LIST: {
+            const List& list = static_cast<const List&>(exp);
             ss << "(";
-            for (const Expression* child : list->values) {
-                ss << toString(child);
+            for (std::shared_ptr<const Expression> child : list.values) {
+                ss << toString(*child);
                 ss << " ";
             }
             ss << ")";
             break;
+        }
 
-        case Expressions::VECTOR:
-            vector = static_cast<const Vector*>(exp);
+
+        case Expressions::VECTOR: {
+            const Vector& vector = static_cast<const Vector&>(exp);
             ss << "[";
-            for (const Expression* child : vector->values) {
-                ss << toString(child);
+            for (std::shared_ptr<const Expression> child : vector.values) {
+                ss << toString(*child);
                 ss << " ";
             }
             ss << "]";
             break;
+        }
 
-        case Expressions::SET:
-            set = static_cast<const Set*>(exp);
+        case Expressions::SET: {
+            const Set& set = static_cast<const Set&>(exp);
             ss << "{";
-            for (const Expression* child : set->values) {
-                ss << toString(child);
+            for (std::shared_ptr<const Expression> child : set.values) {
+                ss << toString(*child);
                 ss << " ";
             }
             ss << "}";
             break;
+        }
 
-        case Expressions::ATOM:
-            atom = static_cast<const Atom*>(exp);
-            if (atom->value) {
+        case Expressions::ATOM: {
+            const Atom& atom = static_cast<const Atom&>(exp);
+            if (atom.value) {
                 ss << ":";
             }
-            ss << atom->atom;
+            ss << atom.atom;
             break;
+        }
 
         case Expressions::STRING:
-            ss << static_cast<const String*>(exp)->str;
+            ss << static_cast<const String&>(exp).str;
             break;
 
         case Expressions::INTEGER:
-            ss << static_cast<const Integer*>(exp)->integer;
+            ss << static_cast<const Integer&>(exp).integer;
             break;
 
         case Expressions::NIL:
@@ -113,126 +109,124 @@ std::string toString(const Expression* exp) {
             break;
 
         default:
-            ss << exp->getName();
+            ss << exp.getName();
             break;
     }
     return ss.str();
 }
 
-const Expression* Interpreter::interpret(const Expression* exp) {
-    switch (exp->getType()) {
+std::unique_ptr<const Expression> Interpreter::interpret(const Expression& exp) {
+    switch (exp.getType()) {
         case Expressions::FUNCTION:
         case Expressions::INTEGER:
         case Expressions::NIL:
         case Expressions::SET:
         case Expressions::STRING:
         case Expressions::VECTOR:
-            return exp;
+            return exp.copy();
 
         case Expressions::ATOM:
-            return get(static_cast<const Atom*>(exp)->atom);
+            return get(static_cast<const Atom&>(exp).atom).copy();
 
         case Expressions::LIST: {
-            const List* list = static_cast<const List*>(exp);
-            if (list->values.empty()) {
-                return new Nil;
+            List::values_t values = static_cast<const List&>(exp).values;
+            if (values.empty()) {
+                return std::unique_ptr<const Expression>(new Nil);
             }
 
-            const Expression* hd = list->values[0];
-            if (const Atom* atom = dynamic_cast<const Atom*>(hd)) {
-                std::string identifier = atom->atom;
-                if (atom->value) {
-                    // set access
-                    if (const Atom* setName = dynamic_cast<const Atom*>(list->values[1])) {
-                        const Expression* setExpression = get(setName->atom);
-                        if (const Set* set = dynamic_cast<const Set*>(setExpression)) {
-                            auto it = set->values.begin();
-                            while (it != set->values.end()) {
-                                const Expression* key = *it;
-                                it++;
-                                const Expression* value = *it;
-                                it++;
-
-                                if (const Atom* atomKey = dynamic_cast<const Atom*>(key)) {
-                                    if (atomKey->atom == identifier) {
-                                        return value;
-                                    }
-                                }
-                            }
-                            return new Nil;
-                        }
-                    }
-                } else {
-                    // function call
-                    const Expression* value = get(identifier);
-                    if (const Fun* function = dynamic_cast<const Fun*>(value)) {
-                        List::values_t parameters(list->values);
-                        parameters.erase(parameters.begin());
-                        if (function->requireParameterEvaluation()) {
-                            for (auto it = parameters.begin(); it != parameters.end(); it++) {
-                                *it = interpret(*it);
-                            }
-                        }
-                        List* parametersList = new List(parameters);
-                        const Expression* result = function->call(*this, parametersList);
-                        return result;
-                    }
-                }
+            std::shared_ptr<const Atom> atom = std::static_pointer_cast<const Atom>(values[0]);
+            if (atom->value) {
+                std::unique_ptr<const Expression> set = interpret(*values[1]);
+                return accessSet(atom->atom, static_cast<const Set*>(set.get())->values);
+            } else {
+                return callFunction(values);
             }
-
-            throw std::runtime_error(hd->getName() + " is not a valid function identifier");
         }
     }
 }
 
-const Expression* print(Interpreter& context, const List* parameters) {
-    for (const Expression* parameter : parameters->values) {
-        std::cout << toString(parameter);
+std::unique_ptr<const Expression> Interpreter::accessSet(const std::string& key, const List::values_t& values) {
+    auto it = values.begin();
+    while (it != values.end()) {
+        std::shared_ptr<const Atom> k = std::static_pointer_cast<const Atom>(*it);
+        it++;
+        if (it == values.end()) {
+            break;
+        }
+        std::shared_ptr<const Expression> v = *it;
+        it++;
+
+        if (k->atom == key) {
+            return v->copy();
+        }
+    }
+    return std::unique_ptr<const Expression>(new Nil);
+}
+
+std::unique_ptr<const Expression> Interpreter::callFunction(const List::values_t& values) {
+    std::shared_ptr<const Atom> atom = std::static_pointer_cast<const Atom>(values[0]);
+    const Fun& function = static_cast<const Fun&>(get(atom->atom));
+
+    List::values_t parameters(values);
+    parameters.erase(parameters.begin());
+
+    if (function.requireParameterEvaluation()) {
+        for (auto it = parameters.begin(); it != parameters.end(); it++) {
+            *it = interpret(**it);
+        }
+    }
+
+    return function.call(*this, parameters);
+}
+
+std::unique_ptr<const Expression> print(Interpreter& context, const List::values_t& parameters) {
+    for (std::shared_ptr<const Expression> parameter : parameters) {
+        std::cout << toString(*parameter);
     }
     std::cout.flush();
-    return new Nil;
+    return std::unique_ptr<const Expression>(new Nil);
 }
 
-const Expression* println(Interpreter& context, const List* parameters) {
+std::unique_ptr<const Expression> println(Interpreter& context, const List::values_t& parameters) {
     print(context, parameters);
     std::cout << std::endl;
-    return new Nil;
+    return std::unique_ptr<const Expression>(new Nil);
 }
 
-const Expression* readln(Interpreter& context, const List* parameters) {
+std::unique_ptr<const Expression> readln(Interpreter& context, const List::values_t& parameters) {
     print(context, parameters);
     std::string line;
     std::cin >> line;
-    return new String(line);
+    return std::unique_ptr<const Expression>(new String(line));
 }
 
-const Expression* plus(Interpreter& context, const List* parameters) {
+std::unique_ptr<const Expression> plus(Interpreter& context, const List::values_t& parameters) {
     Integer::integer_t acc = 0;
-    for (const Expression* parameter : parameters->values) {
-        if (const Integer* integer = dynamic_cast<const Integer*>(parameter)) {
+    for (std::shared_ptr<const Expression> parameter : parameters) {
+        if (std::shared_ptr<const Integer> integer = std::dynamic_pointer_cast<const Integer>(parameter)) {
             acc += integer->integer;
         }
     }
-    return new Integer(acc);
+    return std::unique_ptr<const Expression>(new Integer(acc));
 }
 
-const Expression* Interpreter::let(const List* parameters) {
+std::unique_ptr<const Expression> Interpreter::let(const List::values_t& parameters) {
     Interpreter child(this);
 
-    const Vector* bindings = static_cast<const Vector*>(parameters->values[0]);
+    std::shared_ptr<const Vector> bindings = std::static_pointer_cast<const Vector>(parameters[0]);
     auto it = bindings->values.begin();
     while (it != bindings->values.end()) {
-        const Atom* name = static_cast<const Atom*>(*it);
+        std::shared_ptr<const Atom> name = std::static_pointer_cast<const Atom>(*it);
         it++;
-        const Expression* value = *it;
+        std::shared_ptr<const Expression> value = *it;
         it++;
 
-        child.set(name->atom, interpret(value));
+        child.set(name->atom, interpret(*value));
     }
 
-    const Expression* result = new Nil;
-    for (int i = 1; i < parameters->values.size(); i++) {
-        result = child.interpret(parameters->values[i]);
+    std::unique_ptr<const Expression> result = std::unique_ptr<const Expression>(new Nil);
+    for (int i = 1; i < parameters.size(); i++) {
+        result = child.interpret(*parameters[i]);
     }
 
     return result;

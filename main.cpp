@@ -14,12 +14,12 @@ int main() {
     Interpreter interpreter;
 
     while (true) {
-        const Expression* expression = parser.next();
+        std::unique_ptr<const Expression> expression = parser.next();
         if (expression->getType() == Expressions::NIL) {
             break;
         }
-        const Expression* result = interpreter.interpret(expression);
-        cout << endl << "> " << toString(result) << endl;
+        std::unique_ptr<const Expression> result = interpreter.interpret(*expression);
+        cout << endl << "> " << toString(*result) << endl;
     }
 
     return 0;

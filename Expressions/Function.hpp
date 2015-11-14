@@ -23,19 +23,19 @@ public:
     virtual std::string getName() const { return "FUNCTION"; }
     virtual Expressions getType() const { return Expressions::FUNCTION; }
 
-    virtual const Expression* call(Scope& scope, const List* parameters) const = 0;
+    virtual std::unique_ptr<const Expression> call(Scope& scope, const List::values_t& parameters) const = 0;
     virtual bool requireParameterEvaluation() const = 0;
 };
 
 template<typename Scope>
 class NativeFunction : public Function<Scope> {
 public:
-    typedef std::function<const Expression*(Scope& scope, const List*)> function_t;
+    typedef std::function<std::unique_ptr<const Expression>(Scope& scope, const List::values_t&)> function_t;
 
     const function_t functionPtr;
     const bool macro;
 
-    NativeFunction(std::string functionName, const function_t functionPtr, bool macro)
+    NativeFunction(const std::string& functionName, const function_t functionPtr, bool macro)
             : Function<Scope>(functionName)
             , functionPtr(functionPtr)
             , macro(macro)
@@ -43,7 +43,11 @@ public:
 
     virtual ~NativeFunction() {}
 
-    virtual const Expression* call(Scope& scope, const List* parameters) const {
+    virtual std::unique_ptr<const Expression> copy() const {
+        return std::unique_ptr<const Expression>(new NativeFunction(this->functionName, functionPtr, macro));
+    }
+
+    virtual std::unique_ptr<const Expression> call(Scope& scope, const List::values_t& parameters) const {
         return functionPtr(scope, parameters);
     }
 

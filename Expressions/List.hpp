@@ -10,15 +10,23 @@
 
 class List : public Expression {
 public:
-    typedef std::vector<const Expression*> values_t;
+    typedef std::vector<std::shared_ptr<const Expression>> values_t;
 
     const values_t values;
 
     List() : values() {}
-    List(const values_t values) : values(values) {}
+    List(const values_t& values) : values(values) {}
 
     virtual std::string getName() const { return "LIST"; }
     virtual Expressions getType() const { return Expressions::LIST; }
+
+    virtual std::unique_ptr<const Expression> copy() const {
+        values_t newValues;
+        for (auto value : values) {
+            newValues.push_back(value->copy());
+        }
+        return std::unique_ptr<const Expression>(new List(newValues));
+    }
 };
 
 #endif //SLANG_LIST_HPP
