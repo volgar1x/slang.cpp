@@ -22,7 +22,6 @@ private:
     void ignoreLine();
     void ignoreWhitespaces();
     std::string untilWhitespace();
-    bool isValidIdentifierPart(char c);
     bool isWhitespacePart(char c);
     bool isEndLex(char c);
 

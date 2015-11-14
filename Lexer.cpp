@@ -29,10 +29,6 @@ void Lexer::ignoreWhitespaces() {
     _is.putback(c);
 }
 
-bool Lexer::isValidIdentifierPart(char c) {
-    return isAlphanumeric(c);
-}
-
 bool Lexer::isWhitespacePart(char c) {
     return c == '\0' || c == ' ' || c == '\n';
 }
