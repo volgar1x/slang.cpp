@@ -8,12 +8,12 @@
 #include "Expressions.hpp"
 
 InterpreterContext::InterpreterContext()
-    : parent(nullptr)
-{ }
+        : parent(nullptr)
+        { }
 
-InterpreterContext::InterpreterContext(InterpreterContext *parent)
-    : parent(parent)
-{ }
+InterpreterContext::InterpreterContext(InterpreterContext* parent)
+        : parent(parent)
+        { }
 
 InterpreterContext::~InterpreterContext() {
 
@@ -70,7 +70,7 @@ Interpreter::~Interpreter() {
     delete currentContext;
 }
 
-std::string Interpreter::toString(const Expression *exp) {
+std::string Interpreter::toString(const Expression* exp) {
     std::stringstream ss;
 
     const List* list;
@@ -136,7 +136,7 @@ std::string Interpreter::toString(const Expression *exp) {
     return ss.str();
 }
 
-const Expression* Interpreter::interpret(const Expression *exp) {
+const Expression* Interpreter::interpret(const Expression* exp) {
     switch (exp->getType()) {
         case Expressions::FUNCTION:
         case Expressions::INTEGER:
@@ -202,7 +202,7 @@ const Expression* Interpreter::interpret(const Expression *exp) {
     }
 }
 
-const Expression* Interpreter::print(const List *parameters) {
+const Expression* Interpreter::print(const List* parameters) {
     for (const Expression* parameter : parameters->values) {
         std::cout << toString(parameter);
     }
@@ -210,13 +210,13 @@ const Expression* Interpreter::print(const List *parameters) {
     return new Nil;
 }
 
-const Expression* Interpreter::println(const List *parameters) {
+const Expression* Interpreter::println(const List* parameters) {
     print(parameters);
     std::cout << std::endl;
     return new Nil;
 }
 
-const Expression* Interpreter::plus(const List *parameters) {
+const Expression* Interpreter::plus(const List* parameters) {
     Integer::integer_t acc = 0;
     for (const Expression* parameter : parameters->values) {
         if (const Integer* integer = dynamic_cast<const Integer*>(parameter)) {
@@ -226,7 +226,7 @@ const Expression* Interpreter::plus(const List *parameters) {
     return new Integer(acc);
 }
 
-const Expression* Interpreter::let(const List *parameters) {
+const Expression* Interpreter::let(const List* parameters) {
     InterpreterContext* parentContext = currentContext;
     InterpreterContext context(parentContext);
 

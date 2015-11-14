@@ -22,7 +22,7 @@ const Expression* Parser::next() {
     return next(lex);
 }
 
-const Expression* Parser::next(const Lex *lex) {
+const Expression* Parser::next(const Lex* lex) {
     switch (lex->lexType) {
         case LexType::STR:
             return nextString();
