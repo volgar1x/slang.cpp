@@ -28,3 +28,12 @@
   (defun print-name [name] (println name))
   (let [name "local"]
     (print-name name)))
+
+(case
+  (() "falsy")
+  ([] "falsy")
+  ({} "falsy")
+  (nil "falsy")
+  ("" "falsy")
+  (0 "falsy")
+  (:true "truthy"))

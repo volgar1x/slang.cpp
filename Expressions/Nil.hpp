@@ -17,6 +17,8 @@ public:
     virtual std::unique_ptr<const Expression> copy() const {
         return std::unique_ptr<const Expression>(new Nil);
     }
+
+    virtual bool coerceBoolean() const { return false; }
 };
 
 #endif //SLANG_NIL_HPP

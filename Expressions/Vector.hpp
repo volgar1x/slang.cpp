@@ -27,6 +27,8 @@ public:
         }
         return std::unique_ptr<const Expression>(new Vector(newValues));
     }
+
+    virtual bool coerceBoolean() const { return !values.empty(); }
 };
 
 #endif //SLANG_VECTOR_HPP

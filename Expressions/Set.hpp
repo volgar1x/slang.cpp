@@ -27,6 +27,8 @@ public:
         }
         return std::unique_ptr<const Expression>(new Set(newValues));
     }
+
+    virtual bool coerceBoolean() const { return !values.empty(); }
 };
 
 #endif //SLANG_SET_HPP

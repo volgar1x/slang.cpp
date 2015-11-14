@@ -21,6 +21,8 @@ public:
     virtual std::unique_ptr<const Expression> copy() const {
         return std::unique_ptr<const Expression>(new Integer(integer));
     }
+
+    virtual bool coerceBoolean() const { return integer != 0; }
 };
 
 #endif //SLANG_INTEGER_HPP

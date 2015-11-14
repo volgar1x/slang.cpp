@@ -56,6 +56,10 @@ std::unique_ptr<const Expression> Parser::nextString() {
 }
 
 std::unique_ptr<const Expression> Parser::scanTerm(const std::string& term) {
+    if (term == "nil") {
+        return std::unique_ptr<const Expression>(new Nil);
+    }
+
     if (term[0] == ':') {
         return std::unique_ptr<const Expression>(new Atom(term.substr(1), true));
     }

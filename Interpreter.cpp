@@ -40,6 +40,7 @@ Interpreter::Interpreter()
     set("+", std::unique_ptr<const Expression>(new NaFun("+", &plus, false)));
     set("let", std::unique_ptr<const Expression>(new NaFun("let", &Interpreter::let, true)));
     set("defun", std::unique_ptr<const Expression>(new NaFun("defun", &Interpreter::defun, true)));
+    set("case", std::unique_ptr<const Expression>(new NaFun("case", &case_macro, true)));
 }
 
 Interpreter::Interpreter(const InterpreterContext* parent)
@@ -126,8 +127,13 @@ std::unique_ptr<const Expression> Interpreter::interpret(const Expression& exp) 
         case Expressions::VECTOR:
             return exp.copy();
 
-        case Expressions::ATOM:
-            return get(static_cast<const Atom&>(exp).atom).copy();
+        case Expressions::ATOM: {
+            auto atom = static_cast<const Atom&>(exp);
+            if (atom.value) {
+                return atom.copy();
+            }
+            return get(atom.atom).copy();
+        }
 
         case Expressions::LIST: {
             List::values_t values = static_cast<const List&>(exp).values;
@@ -250,6 +256,17 @@ std::unique_ptr<const Expression> Interpreter::defun(const List::values_t& param
     set(name, std::unique_ptr<const Expression>(new UserFunction(name, rest, arguments)));
 
     return atom->copy();
+}
+
+std::unique_ptr<const Expression> case_macro(Interpreter& context, const List::values_t& parameters) {
+    for (auto parameter : parameters) {
+        auto caseItem = std::static_pointer_cast<const List>(parameter);
+        auto test = context.interpret(*caseItem->values[0]);
+        if (test->coerceBoolean()) {
+            return context.interpret(*caseItem->values[1]);
+        }
+    }
+    return std::unique_ptr<const Expression>(new Nil);
 }
 
 

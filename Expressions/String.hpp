@@ -19,6 +19,8 @@ public:
     virtual std::unique_ptr<const Expression> copy() const {
         return std::unique_ptr<const Expression>(new String(str));
     }
+
+    virtual bool coerceBoolean() const { return !str.empty(); }
 };
 
 #endif //SLANG_STRING_HPP
