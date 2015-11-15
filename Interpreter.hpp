@@ -22,8 +22,6 @@ public:
     const Expression& get(const std::string& key) const;
     void set(const std::string& key, std::unique_ptr<const Expression> value);
 
-    const InterpreterContext& borrowParent(const InterpreterContext& ifAbsent) const;
-
 private:
     const InterpreterContext* parent;
     map_t map;

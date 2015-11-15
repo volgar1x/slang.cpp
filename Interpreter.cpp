@@ -368,9 +368,3 @@ void UserFunction::mapNames(InterpreterContext& context, const List::values_t& p
     }
 }
 
-const InterpreterContext& InterpreterContext::borrowParent(const InterpreterContext& ifAbsent) const {
-    if (parent != nullptr) {
-        return *parent;
-    }
-    return ifAbsent;
-}
