@@ -22,9 +22,7 @@ int main() {
             break;
         }
         try {
-            cout << toString(*expression) << endl;
             std::unique_ptr<const Expression> transformed = macroTransformer.transform(*expression);
-            cout << toString(*transformed) << endl;
             std::unique_ptr<const Expression> result = interpreter.interpret(*transformed);
             cout << endl << "> " << toString(*result) << endl;
         } catch (const Exception& exception) {
