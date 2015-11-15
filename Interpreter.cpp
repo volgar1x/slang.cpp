@@ -199,14 +199,13 @@ std::unique_ptr<const Expression> Interpreter::accessSet(const std::string& key,
 }
 
 std::unique_ptr<const Expression> Interpreter::callFunction(const List::values_t& values) {
-    std::shared_ptr<const Atom> atom = std::static_pointer_cast<const Atom>(values[0]);
+    auto atom = std::static_pointer_cast<const Atom>(values[0]);
     const Fun& function = static_cast<const Fun&>(get(atom->atom));
 
-    List::values_t parameters(values);
-    parameters.erase(parameters.begin());
+    List::values_t parameters(values.begin() + 1, values.end());
 
     if (function.requireParameterEvaluation()) {
-        for (std::shared_ptr<const Expression>& parameter : parameters) {
+        for (auto& parameter : parameters) {
             parameter = interpret(*parameter);
         }
     }
@@ -220,7 +219,9 @@ void load_stdlib(Interpreter& context) {
     context.set("println", std::unique_ptr<const Expression>(new Interpreter::NaFun("println", &println, false)));
     context.set("readln", std::unique_ptr<const Expression>(new Interpreter::NaFun("readln", &readln, false)));
     context.set("+", std::unique_ptr<const Expression>(new Interpreter::NaFun("+", &plus, false)));
+    context.set("-", std::unique_ptr<const Expression>(new Interpreter::NaFun("-", &minus, false)));
     context.set("not", std::unique_ptr<const Expression>(new Interpreter::NaFun("not", &not_fun, false)));
+    context.set(">", std::unique_ptr<const Expression>(new Interpreter::NaFun(">", &sp, false)));
     context.set("let", std::unique_ptr<const Expression>(new Interpreter::NaFun("let", &let_macro, true)));
     context.set("defun", std::unique_ptr<const Expression>(new Interpreter::NaFun("defun", &defun_macro, true)));
     context.set("case", std::unique_ptr<const Expression>(new Interpreter::NaFun("case", &case_macro, true)));
@@ -258,6 +259,24 @@ std::unique_ptr<const Expression> plus(Interpreter& context, const List::values_
         }
     }
     return std::unique_ptr<const Expression>(new Integer(acc));
+}
+
+std::unique_ptr<const Expression> minus(Interpreter& context, const List::values_t& parameters) {
+    Integer::integer_t acc = std::static_pointer_cast<const Integer>(parameters[0])->integer;
+    for (auto it = parameters.begin() + 1; it != parameters.end(); ++it) {
+        acc -= std::static_pointer_cast<const Integer>(*it)->integer;
+    }
+    return std::unique_ptr<const Expression>(new Integer(acc));
+}
+
+std::unique_ptr<const Expression> sp(Interpreter& context, const List::values_t& parameters) {
+    auto lhs = std::static_pointer_cast<const Integer>(parameters[0]);
+    auto rhs = std::static_pointer_cast<const Integer>(parameters[1]);
+    if (lhs->integer > rhs->integer) {
+        return std::unique_ptr<const Expression>(new Atom("true", true));
+    } else {
+        return std::unique_ptr<const Expression>(new Nil);
+    }
 }
 
 std::unique_ptr<const Expression> not_fun(Interpreter& context, const List::values_t& parameters) {

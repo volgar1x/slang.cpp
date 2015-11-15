@@ -16,18 +16,18 @@ int main() {
     MacroTransformer macroTransformer;
     Interpreter interpreter;
 
-    while (true) {
-        std::unique_ptr<const Expression> expression = parser.next();
-        if (expression->getType() == Expressions::NIL) {
-            break;
-        }
-        try {
+    try {
+        while (true) {
+            std::unique_ptr<const Expression> expression = parser.next();
+            if (!expression) {
+                break;
+            }
             std::unique_ptr<const Expression> transformed = macroTransformer.transform(*expression);
             std::unique_ptr<const Expression> result = interpreter.interpret(*transformed);
             cout << endl << "> " << toString(*result) << endl;
-        } catch (const Exception& exception) {
-            cerr << endl << "Unexpected exception: " << exception.cause << endl;
         }
+    } catch (const Exception& exception) {
+        cerr << endl << "Unexpected exception: " << exception.cause << endl;
     }
 
     return 0;

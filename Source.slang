@@ -72,3 +72,14 @@
 
 (unless :true "false" "true")
 (unless nil   "false" "true")
+
+(defun print-times [msg n]
+  (unless (> n 0) nil
+    (do (println msg)
+        (print-times msg (- n 1)))))
+
+(defun fibo [n]
+  (unless (> n 1) n
+    (+ (fibo (- n 1)) (fibo (- n 2)))))
+
+(print-times "hello" (fibo 5))

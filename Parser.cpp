@@ -22,6 +22,9 @@ std::unique_ptr<const Expression> Parser::next() {
 
 std::unique_ptr<const Expression> Parser::next(const Lex& lex) {
     switch (lex.lexType) {
+        case LexType::EOFF:
+            return std::unique_ptr<const Expression>();
+
         case LexType::STR:
             return nextString();
 
