@@ -14,6 +14,7 @@
 #include "Expressions/Quote.hpp"
 #include "Expressions/Set.hpp"
 #include "Expressions/String.hpp"
+#include "Expressions/Unquote.hpp"
 #include "Expressions/Vector.hpp"
 
 #endif //SLANG_EXPRESSIONS_HPP

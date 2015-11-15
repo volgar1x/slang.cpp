@@ -112,6 +112,16 @@ std::string toString(const Expression& exp) {
             ss << "nil";
             break;
 
+        case Expressions::QUOTE:
+            ss << "'";
+            ss << toString(*static_cast<const Quote&>(exp).expression);
+            break;
+
+        case Expressions::UNQUOTE:
+            ss << '#';
+            ss << static_cast<const Unquote&>(exp).name;
+            break;
+
         default:
             ss << exp.getName();
             break;
@@ -155,6 +165,9 @@ std::unique_ptr<const Expression> Interpreter::interpret(const Expression& exp) 
                 return callFunction(values);
             }
         }
+
+        case Expressions::UNQUOTE:
+            throw Exception("cannot unquote here");
     }
 }
 
@@ -207,6 +220,7 @@ void load_stdlib(Interpreter& context) {
     context.set("println", std::unique_ptr<const Expression>(new Interpreter::NaFun("println", &println, false)));
     context.set("readln", std::unique_ptr<const Expression>(new Interpreter::NaFun("readln", &readln, false)));
     context.set("+", std::unique_ptr<const Expression>(new Interpreter::NaFun("+", &plus, false)));
+    context.set("not", std::unique_ptr<const Expression>(new Interpreter::NaFun("not", &not_fun, false)));
     context.set("let", std::unique_ptr<const Expression>(new Interpreter::NaFun("let", &let_macro, true)));
     context.set("defun", std::unique_ptr<const Expression>(new Interpreter::NaFun("defun", &defun_macro, true)));
     context.set("case", std::unique_ptr<const Expression>(new Interpreter::NaFun("case", &case_macro, true)));
@@ -244,6 +258,14 @@ std::unique_ptr<const Expression> plus(Interpreter& context, const List::values_
         }
     }
     return std::unique_ptr<const Expression>(new Integer(acc));
+}
+
+std::unique_ptr<const Expression> not_fun(Interpreter& context, const List::values_t& parameters) {
+    if (parameters[0]->coerceBoolean()) {
+        return std::unique_ptr<const Expression>(new Nil);
+    } else {
+        return std::unique_ptr<const Expression>(new Atom("true", true));
+    }
 }
 
 std::unique_ptr<const Expression> let_macro(Interpreter& context, const List::values_t& parameters) {
@@ -344,4 +366,11 @@ void UserFunction::mapNames(InterpreterContext& context, const List::values_t& p
     for (int i = 0; i < arguments.size(); i++) {
         context.set(arguments[i], parameters[i]->copy());
     }
+}
+
+const InterpreterContext& InterpreterContext::borrowParent(const InterpreterContext& ifAbsent) const {
+    if (parent != nullptr) {
+        return *parent;
+    }
+    return ifAbsent;
 }

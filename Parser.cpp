@@ -40,6 +40,9 @@ std::unique_ptr<const Expression> Parser::next(const Lex& lex) {
         case LexType::CHR:
             return std::unique_ptr<const Expression>(new Quote(next()));
 
+        case LexType::HSH:
+            return std::unique_ptr<const Expression>(new Unquote(_lexer.expectAtom()));
+
         default:
             return std::unique_ptr<const Expression>(new Nil);
     }

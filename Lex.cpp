@@ -17,5 +17,6 @@ std::string toString(LexType lexType) {
         case LexType::CHR: return "CHR";
         case LexType::LEX: return "LEX";
         case LexType::WS: return "WS";
+        case LexType::HSH: return "HSH";
     }
 }

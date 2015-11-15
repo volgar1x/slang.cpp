@@ -17,6 +17,7 @@ enum class Expressions {
     QUOTE,
     SET,
     STRING,
+    UNQUOTE,
     VECTOR,
 };
 

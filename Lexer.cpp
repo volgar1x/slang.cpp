@@ -96,6 +96,9 @@ std::unique_ptr<const Lex> Lexer::next() {
         case '\'':
             return std::unique_ptr<const Lex>(new Lex(LexType::CHR));
 
+        case '#':
+            return std::unique_ptr<const Lex>(new Lex(LexType::HSH));
+
         default:
             _is.putback(c);
             return std::unique_ptr<const Lex>(new StrLex(untilWhitespace()));
@@ -124,4 +127,12 @@ void Lexer::expect(LexType lexType) {
         msg += toString(lex->lexType);
         throw std::runtime_error(msg);
     }
+}
+
+std::string Lexer::expectAtom() {
+    auto lex = next();
+    if (lex->lexType != LexType::LEX) {
+        throw std::runtime_error("expected an atom but got " + toString(lex->lexType));
+    }
+    return static_cast<const StrLex*>(lex.get())->str;
 }

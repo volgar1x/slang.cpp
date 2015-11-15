@@ -15,6 +15,7 @@ public:
 
     std::unique_ptr<const Lex> next();
     void expect(LexType lexType);
+    std::string expectAtom();
 
 private:
     std::unique_ptr<const Lex> nextStr();

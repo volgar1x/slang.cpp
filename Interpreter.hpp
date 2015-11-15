@@ -22,6 +22,8 @@ public:
     const Expression& get(const std::string& key) const;
     void set(const std::string& key, std::unique_ptr<const Expression> value);
 
+    const InterpreterContext& borrowParent(const InterpreterContext& ifAbsent) const;
+
 private:
     const InterpreterContext* parent;
     map_t map;
@@ -53,6 +55,7 @@ std::unique_ptr<const Expression> print(Interpreter& context, const List::values
 std::unique_ptr<const Expression> println(Interpreter& context, const List::values_t& parameters);
 std::unique_ptr<const Expression> readln(Interpreter& context, const List::values_t& parameters);
 std::unique_ptr<const Expression> plus(Interpreter& context, const List::values_t& parameters);
+std::unique_ptr<const Expression> not_fun(Interpreter& context, const List::values_t& parameters);
 std::unique_ptr<const Expression> let_macro(Interpreter& context, const List::values_t& parameters);
 std::unique_ptr<const Expression> defun_macro(Interpreter& context, const List::values_t& parameters);
 std::unique_ptr<const Expression> case_macro(Interpreter& context, const List::values_t& parameters);

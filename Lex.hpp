@@ -20,6 +20,7 @@ enum class LexType {
     CHR,
     LEX,
     WS,
+    HSH,
 };
 
 std::string toString(LexType lexType);

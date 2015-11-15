@@ -66,3 +66,9 @@
 
 (if nil   "true" "false")
 (if :true "true" "false")
+
+(defmacro unless [test block else]
+  '(if (not #test) #block #else))
+
+(unless :true "false" "true")
+(unless nil   "false" "true")

@@ -22,48 +22,21 @@ std::unique_ptr<const Expression> MacroTransformer::transform(const Expression& 
                 List::values_t rest(list.values.begin() + 3, list.values.end());
                 set(name->atom, std::unique_ptr<const Expression>(new UserFunction(name->atom, rest, arguments)));
 
-                return std::unique_ptr<const Expression>(new Nil);
+                return name->copyAsValue(true);
             }
         }
 
-        return onePass(list.values);
+        return unquote(list, *this);
     }
 
     return expression.copy();
 }
 
-std::unique_ptr<const Expression> MacroTransformer::onePass(const List::values_t& values) {
-    auto atom = std::dynamic_pointer_cast<const Atom>(values[0]);
-    if (!atom) {
-        return std::unique_ptr<const Expression>(new List(values));
-    }
-
-    if (containsKey(atom->atom)) {
-        auto expression = static_cast<const UserFunction&>(get(atom->atom));
-        Interpreter interpreter(this);
-        load_stdlib(interpreter);
-        List::values_t parameters(values.begin() + 1, values.end());
-        auto result = expression.call(interpreter, parameters);
-        InterpreterContext unquoteContext;
-        expression.mapNames(unquoteContext, parameters);
-        return unquote(*result, unquoteContext);
-    }
-
-    List::values_t result;
-    result.push_back(atom);
-    for (auto it = values.begin() + 1; it != values.end(); it++) {
-        auto expression = *it;
-        if (auto list = std::dynamic_pointer_cast<const List>(expression)) {
-            result.push_back(onePass(list->values));
-        } else {
-            result.push_back(expression);
-        }
-    }
-    return std::unique_ptr<const Expression>(new List(result));
-}
-
 std::unique_ptr<const Expression> MacroTransformer::unquote(const Expression& expression, const InterpreterContext& context) {
     switch (expression.getType()) {
+        case Expressions::UNQUOTE:
+            return context.get(static_cast<const Unquote&>(expression).name).copy();
+
         case Expressions::LIST:
             return unquoteCol<List>(static_cast<const List&>(expression).values, context);
         case Expressions::SET:
@@ -79,24 +52,31 @@ std::unique_ptr<const Expression> MacroTransformer::unquote(const Expression& ex
 
 template<typename Col>
 std::unique_ptr<const Expression> MacroTransformer::unquoteCol(const List::values_t& values, const InterpreterContext& context) {
-    List::values_t result;
-    for (auto value : values) {
-        if (auto atom = std::dynamic_pointer_cast<const Atom>(value)) {
-            if (atom->atom[0] == '#') {
-                auto key = atom->atom.substr(1);
-                result.push_back(context.get(key).copy());
-            } else {
-                result.push_back(value->copy());
+    if (!values.empty() && values[0]->getType() == Expressions::ATOM) {
+        auto atom = std::static_pointer_cast<const Atom>(values[0]);
+        if (containsKey(atom->atom)) {
+            Interpreter interpreter(&context);
+            load_stdlib(interpreter);
+
+            List::values_t parameters(values.begin() + 1, values.end());
+            for (auto& parameter : parameters) {
+                parameter = unquote(*parameter, context);
             }
-        } else if (auto list = std::dynamic_pointer_cast<const List>(value)) {
-            result.push_back(unquoteCol<List>(list->values, context));
-        } else if (auto set = std::dynamic_pointer_cast<const Set>(value)) {
-            result.push_back(unquoteCol<Set>(set->values, context));
-        } else if (auto vector = std::dynamic_pointer_cast<const Vector>(value)) {
-            result.push_back(unquoteCol<Vector>(vector->values, context));
-        } else {
-            result.push_back(value->copy());
+
+            auto function = static_cast<const UserFunction&>(get(atom->atom));
+            auto result = function.call(interpreter, parameters);
+
+            InterpreterContext subContext(&context);
+            function.mapNames(subContext, parameters);
+            return unquote(*result, subContext);
         }
     }
+
+    List::values_t result;
+
+    for (auto value : values) {
+        result.push_back(unquote(*value, context));
+    }
+
     return std::unique_ptr<const Expression>(new Col(result));
 }
