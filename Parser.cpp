@@ -37,6 +37,9 @@ std::unique_ptr<const Expression> Parser::next(const Lex& lex) {
         case LexType::SET_START:
             return nextCol<Set>(LexType::SET_END);
 
+        case LexType::CHR:
+            return std::unique_ptr<const Expression>(new Quote(next()));
+
         default:
             return std::unique_ptr<const Expression>(new Nil);
     }

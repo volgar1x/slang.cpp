@@ -14,6 +14,7 @@ enum class Expressions {
     INTEGER,
     LIST,
     NIL,
+    QUOTE,
     SET,
     STRING,
     VECTOR,

@@ -18,6 +18,7 @@ public:
     InterpreterContext();
     InterpreterContext(const InterpreterContext* parent);
 
+    bool containsKey(const std::string& key) const;
     const Expression& get(const std::string& key) const;
     void set(const std::string& key, std::unique_ptr<const Expression> value);
 
@@ -43,16 +44,17 @@ private:
     std::unique_ptr<const Expression> accessSet(const std::string& key, const List::values_t& values);
     std::unique_ptr<const Expression> callFunction(const List::values_t& values);
 
-    std::unique_ptr<const Expression> let(const List::values_t& parameters);
-    std::unique_ptr<const Expression> defun(const List::values_t& parameters);
 };
 
 std::string toString(const Expression& exp);
 
+void load_stdlib(Interpreter& context);
 std::unique_ptr<const Expression> print(Interpreter& context, const List::values_t& parameters);
 std::unique_ptr<const Expression> println(Interpreter& context, const List::values_t& parameters);
 std::unique_ptr<const Expression> readln(Interpreter& context, const List::values_t& parameters);
 std::unique_ptr<const Expression> plus(Interpreter& context, const List::values_t& parameters);
+std::unique_ptr<const Expression> let_macro(Interpreter& context, const List::values_t& parameters);
+std::unique_ptr<const Expression> defun_macro(Interpreter& context, const List::values_t& parameters);
 std::unique_ptr<const Expression> case_macro(Interpreter& context, const List::values_t& parameters);
 std::unique_ptr<const Expression> do_macro(Interpreter& context, const List::values_t& parameters);
 std::unique_ptr<const Expression> try_macro(Interpreter& context, const List::values_t& parameters);
@@ -74,6 +76,8 @@ public:
     virtual bool requireParameterEvaluation() const;
     virtual std::unique_ptr<const Expression> call(Interpreter& scope, const List::values_t& parameters) const;
     virtual std::unique_ptr<const Expression> copy() const;
+
+    virtual void mapNames(InterpreterContext& context, const List::values_t& parameters) const;
 };
 
 #endif //SLANG_INTERPRETER_HPP

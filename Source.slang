@@ -58,3 +58,11 @@
 
   ([cause]
     (println "something bad happened: " cause)))
+
+(defmacro if [test block else]
+  '(case
+    (#test #block)
+    (:true #else)))
+
+(if nil   "true" "false")
+(if :true "true" "false")

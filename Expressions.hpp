@@ -11,6 +11,7 @@
 #include "Expressions/Integer.hpp"
 #include "Expressions/List.hpp"
 #include "Expressions/Nil.hpp"
+#include "Expressions/Quote.hpp"
 #include "Expressions/Set.hpp"
 #include "Expressions/String.hpp"
 #include "Expressions/Vector.hpp"

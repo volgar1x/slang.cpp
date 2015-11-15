@@ -15,6 +15,11 @@ InterpreterContext::InterpreterContext(const InterpreterContext* parent)
         : parent(parent)
         { }
 
+bool InterpreterContext::containsKey(const std::string& key) const {
+    auto it = map.find(key);
+    return it != map.end();
+}
+
 const Expression& InterpreterContext::get(const std::string& key) const {
     auto it = map.find(key);
     if (it != map.end()) {
@@ -33,17 +38,7 @@ void InterpreterContext::set(const std::string& key, std::unique_ptr<const Expre
 Interpreter::Interpreter()
     : InterpreterContext()
 {
-    using namespace std::placeholders;
-    set("print", std::unique_ptr<const Expression>(new NaFun("print", &print, false)));
-    set("println", std::unique_ptr<const Expression>(new NaFun("println", &println, false)));
-    set("readln", std::unique_ptr<const Expression>(new NaFun("readln", &readln, false)));
-    set("+", std::unique_ptr<const Expression>(new NaFun("+", &plus, false)));
-    set("let", std::unique_ptr<const Expression>(new NaFun("let", &Interpreter::let, true)));
-    set("defun", std::unique_ptr<const Expression>(new NaFun("defun", &Interpreter::defun, true)));
-    set("case", std::unique_ptr<const Expression>(new NaFun("case", &case_macro, true)));
-    set("do", std::unique_ptr<const Expression>(new NaFun("do", &do_macro, true)));
-    set("try", std::unique_ptr<const Expression>(new NaFun("try", &try_macro, true)));
-    set("raise", std::unique_ptr<const Expression>(new NaFun("raise", &raise_macro, true)));
+    load_stdlib(*this);
 }
 
 Interpreter::Interpreter(const InterpreterContext* parent)
@@ -143,6 +138,9 @@ std::unique_ptr<const Expression> Interpreter::interpret(const Expression& exp) 
             return get(atom.atom).copy();
         }
 
+        case Expressions::QUOTE:
+            return static_cast<const Quote&>(exp).expression->copy();
+
         case Expressions::LIST: {
             List::values_t values = static_cast<const List&>(exp).values;
             if (values.empty()) {
@@ -203,6 +201,20 @@ std::unique_ptr<const Expression> Interpreter::callFunction(const List::values_t
     return function.call(*this, parameters);
 }
 
+
+void load_stdlib(Interpreter& context) {
+    context.set("print", std::unique_ptr<const Expression>(new Interpreter::NaFun("print", &print, false)));
+    context.set("println", std::unique_ptr<const Expression>(new Interpreter::NaFun("println", &println, false)));
+    context.set("readln", std::unique_ptr<const Expression>(new Interpreter::NaFun("readln", &readln, false)));
+    context.set("+", std::unique_ptr<const Expression>(new Interpreter::NaFun("+", &plus, false)));
+    context.set("let", std::unique_ptr<const Expression>(new Interpreter::NaFun("let", &let_macro, true)));
+    context.set("defun", std::unique_ptr<const Expression>(new Interpreter::NaFun("defun", &defun_macro, true)));
+    context.set("case", std::unique_ptr<const Expression>(new Interpreter::NaFun("case", &case_macro, true)));
+    context.set("do", std::unique_ptr<const Expression>(new Interpreter::NaFun("do", &do_macro, true)));
+    context.set("try", std::unique_ptr<const Expression>(new Interpreter::NaFun("try", &try_macro, true)));
+    context.set("raise", std::unique_ptr<const Expression>(new Interpreter::NaFun("raise", &raise_macro, true)));
+}
+
 std::unique_ptr<const Expression> print(Interpreter& context, const List::values_t& parameters) {
     for (std::shared_ptr<const Expression> parameter : parameters) {
         std::cout << toString(*parameter);
@@ -234,8 +246,8 @@ std::unique_ptr<const Expression> plus(Interpreter& context, const List::values_
     return std::unique_ptr<const Expression>(new Integer(acc));
 }
 
-std::unique_ptr<const Expression> Interpreter::let(const List::values_t& parameters) {
-    Interpreter child(this);
+std::unique_ptr<const Expression> let_macro(Interpreter& context, const List::values_t& parameters) {
+    Interpreter child(&context);
 
     std::shared_ptr<const Vector> bindings = std::static_pointer_cast<const Vector>(parameters[0]);
     auto it = bindings->values.begin();
@@ -245,13 +257,13 @@ std::unique_ptr<const Expression> Interpreter::let(const List::values_t& paramet
         std::shared_ptr<const Expression> value = *it;
         it++;
 
-        child.set(name->atom, interpret(*value));
+        child.set(name->atom, context.interpret(*value));
     }
 
     return child.interpretAll(parameters.begin() + 1, parameters.end());
 }
 
-std::unique_ptr<const Expression> Interpreter::defun(const List::values_t& parameters) {
+std::unique_ptr<const Expression> defun_macro(Interpreter& context, const List::values_t& parameters) {
     std::shared_ptr<const Atom> atom = std::static_pointer_cast<const Atom>(parameters[0]);
     std::shared_ptr<const Vector> vector = std::static_pointer_cast<const Vector>(parameters[1]);
 
@@ -265,7 +277,7 @@ std::unique_ptr<const Expression> Interpreter::defun(const List::values_t& param
     List::values_t rest(parameters);
     rest.erase(rest.begin(), rest.begin() + 2);
 
-    set(name, std::unique_ptr<const Expression>(new UserFunction(name, rest, arguments)));
+    context.set(name, std::unique_ptr<const Expression>(new UserFunction(name, rest, arguments)));
 
     return atom->copyAsValue(true);
 }
@@ -319,14 +331,17 @@ bool UserFunction::requireParameterEvaluation() const {
 
 std::unique_ptr<const Expression> UserFunction::call(Interpreter& scope, const List::values_t& parameters) const {
     Interpreter child(&scope);
-
-    for (int i = 0; i < arguments.size(); i++) {
-        child.set(arguments[i], parameters[i]->copy());
-    }
+    mapNames(child, parameters);
 
     return child.interpretAll(expressions.begin(), expressions.end());
 }
 
 std::unique_ptr<const Expression> UserFunction::copy() const {
     return std::unique_ptr<const Expression>(new UserFunction(this->functionName, expressions, arguments));
+}
+
+void UserFunction::mapNames(InterpreterContext& context, const List::values_t& parameters) const {
+    for (int i = 0; i < arguments.size(); i++) {
+        context.set(arguments[i], parameters[i]->copy());
+    }
 }
